@@ -11,11 +11,10 @@ const App = () => {
   const [recipes, setRecipes] = useState([]);
   const [editForm, setEditForm] = useState(null);
 
-  // 食材クイックフィルターに「挽肉」を復活
   const quickFilters = ["すべて", "鶏もも", "鶏むね", "豚ロース", "豚こま切れ", "豚バラ", "挽肉", "牛肉", "魚介", "副菜"];
 
-  // 食材表記の統一ルール
   const standardizeIngredient = (text) => {
+    if (!text) return "その他";
     let standard = text;
     if (text.includes("挽肉") || text.includes("ひき肉") || text.includes("合挽き")) standard = "挽肉";
     else if (text.includes("鶏肉") || text.includes("鶏モモ") || text.includes("鶏もも肉")) standard = "鶏もも";
@@ -23,11 +22,13 @@ const App = () => {
     else if (text.includes("豚ロース肉") || text.includes("トンテキ")) standard = "豚ロース";
     else if (text.includes("豚バラ肉") || text.includes("豚バラ")) standard = "豚バラ";
     else if (text.includes("豚肉") || text.includes("豚こま")) standard = "豚こま切れ";
+    else if (text.includes("牛") || text.includes("ビーフ")) standard = "牛肉";
+    else if (text.includes("マグロ") || text.includes("サーモン") || text.includes("鰆") || text.includes("カツオ") || text.includes("ぶり") || text.includes("鮭") || text.includes("魚")) standard = "魚介";
+    else if (text.includes("浸し") || text.includes("蒸し") || text.includes("ピーマン炒め") || text.includes("野菜")) standard = "副菜";
     return standard;
   };
 
-  // 全メニューリスト
-  const fullMenuData = [
+  const initialFullMenu = [
     { title: "マグロアボカド丼", ingredient: "マグロ, アボカド", tag: "魚介" },
     { title: "サーモンアボカド丼", ingredient: "サーモン, アボカド", tag: "魚介" },
     { title: "チーズタッカルビ", ingredient: "鶏もも, チーズ", tag: "鶏もも" },
@@ -35,7 +36,7 @@ const App = () => {
     { title: "油淋鶏", ingredient: "鶏もも, 長ねぎ", tag: "鶏もも" },
     { title: "野菜炒め", ingredient: "豚こま切れ, ニンジン, ピーマン", tag: "豚こま切れ" },
     { title: "豚ローストンテキ", ingredient: "豚ロース, きのこ", tag: "豚ロース" },
-    { title: "鰆の焼き物", ingredient: "鰆", tag: "魚介" },
+    { title: "鰆の塩焼き", ingredient: "鰆", tag: "魚介" },
     { title: "ベーコンとピーマン炒め", ingredient: "ベーコン, ピーマン", tag: "副菜" },
     { title: "鶏チキンステーキ", ingredient: "鶏もも", tag: "鶏もも" },
     { title: "サムギョプサル", ingredient: "豚バラ", tag: "豚バラ" },
@@ -43,9 +44,9 @@ const App = () => {
     { title: "豚の生姜焼き", ingredient: "豚こま切れ, 玉ねぎ", tag: "豚こま切れ" },
     { title: "肉そぼろ甘辛炒め", ingredient: "挽肉", tag: "挽肉" },
     { title: "鶏肉とブロッコリーのクリーム煮", ingredient: "鶏もも, ブロッコリー", tag: "鶏もも" },
-    { title: "春巻き", ingredient: "豚こま切れ, 春雨", tag: "中華" },
+    { title: "春巻き", ingredient: "豚こま切れ, 春雨", tag: "豚こま切れ" },
     { title: "カツオのたたき", ingredient: "カツオ", tag: "魚介" },
-    { title: "鶏肉カレー", ingredient: "鶏もも, 野菜", tag: "カレー" },
+    { title: "鶏肉カレー", ingredient: "鶏もも, 野菜", tag: "鶏もも" },
     { title: "豚キムチ", ingredient: "豚バラ, キムチ", tag: "豚バラ" },
     { title: "チキントマト煮込み", ingredient: "鶏もも, トマト", tag: "鶏もも" },
     { title: "スペアリブ", ingredient: "豚バラ", tag: "豚バラ" },
@@ -59,7 +60,7 @@ const App = () => {
     { title: "鮭のムニエル", ingredient: "鮭", tag: "魚介" },
     { title: "回鍋肉", ingredient: "豚バラ, キャベツ", tag: "豚バラ" },
     { title: "親子丼", ingredient: "鶏もも, 卵", tag: "鶏もも" },
-    { title: "豚もやし（レンジ）", ingredient: "豚バラ, もやし", tag: "時短" },
+    { title: "豚もやし（レンジ）", ingredient: "豚バラ, もやし", tag: "豚バラ" },
     { title: "小松菜のお浸し", ingredient: "小松菜", tag: "副菜" },
     { title: "菊菜のお浸し", ingredient: "菊菜", tag: "副菜" },
     { title: "カオマンガイ", ingredient: "鶏もも, 米", tag: "鶏もも" },
@@ -78,8 +79,8 @@ const App = () => {
     { title: "野菜の蒸し焼き", ingredient: "季節の野菜", tag: "副菜" },
     { title: "豚ロース肉のナス巻き", ingredient: "豚ロース, ナス", tag: "豚ロース" },
     { title: "豚肩ロースステーキ", ingredient: "豚ロース", tag: "豚ロース" }
-  ].map((item, index) => ({
-    id: index + 1,
+  ].map((item, idx) => ({
+    id: idx + 1,
     ...item,
     time: "20分",
     cost: "500円",
@@ -88,58 +89,71 @@ const App = () => {
   }));
 
   useEffect(() => {
-    const saved = localStorage.getItem('my-recipes-v6');
+    const saved = localStorage.getItem('my-recipes-v8');
     if (saved) {
       setRecipes(JSON.parse(saved));
     } else {
-      setRecipes(fullMenuData);
+      setRecipes(initialFullMenu);
     }
   }, []);
 
   useEffect(() => {
     if (recipes.length > 0) {
-      localStorage.setItem('my-recipes-v6', JSON.stringify(recipes));
+      localStorage.setItem('my-recipes-v8', JSON.stringify(recipes));
     }
   }, [recipes]);
 
-  const filteredRecipes = recipes.filter(r => {
-    const searchLower = searchTerm.toLowerCase();
-    if (searchTerm === "すべて" || searchTerm === "") return true;
-    return (
-      r.title.toLowerCase().includes(searchLower) || 
-      r.ingredient.toLowerCase().includes(searchLower) || 
-      (r.tag && r.tag.toLowerCase().includes(searchLower))
-    );
-  });
-
   const generateRecipeFromAI = async (dishName) => {
     const apiKey = ""; 
-    try {
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: `料理名「${dishName}」のレシピを教えてください。食材名には必ず以下の分類のいずれかを使用し、表記を厳守してください：鶏もも, 鶏むね, 豚ロース, 豚こま切れ, 豚バラ, 挽肉。材料リスト（配列形式）と手順（配列形式）、目安費用、目安時間をJSON形式で出力してください。` }] }],
-          generationConfig: {
-            responseMimeType: "application/json",
-            responseSchema: {
-              type: "OBJECT",
-              properties: {
-                ingredients: { type: "ARRAY", items: { type: "STRING" } },
-                steps: { type: "ARRAY", items: { type: "STRING" } },
-                cost: { type: "STRING" },
-                time: { type: "STRING" }
-              }
-            }
-          }
-        })
-      });
-      const data = await response.json();
-      const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-      return text ? JSON.parse(text) : null;
-    } catch (error) {
-      return null;
-    }
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+    
+    const userPrompt = `料理名「${dishName}」のレシピを作成してください。料理サイトの構成を参考に、材料と手順を詳細に出力してください。
+    【JSON構造】
+    - ingredients: string[] (材料と分量)
+    - steps: string[] (調理工程)
+    - cost: string (目安費用)
+    - time: string (目安時間)
+    - mainCategory: string (鶏もも, 鶏むね, 豚ロース, 豚こま切れ, 豚バラ, 挽肉, 牛肉, 魚介, 副菜 から選択)`;
+
+    const payload = {
+      contents: [{ parts: [{ text: userPrompt }] }],
+      generationConfig: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: "OBJECT",
+          properties: {
+            ingredients: { type: "ARRAY", items: { type: "STRING" } },
+            steps: { type: "ARRAY", items: { type: "STRING" } },
+            cost: { type: "STRING" },
+            time: { type: "STRING" },
+            mainCategory: { type: "STRING" }
+          },
+          required: ["ingredients", "steps", "cost", "time", "mainCategory"]
+        }
+      }
+    };
+
+    const fetchWithRetry = async (retries = 5, delay = 1000) => {
+      try {
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (!response.ok) throw new Error(`Status: ${response.status}`);
+        const data = await response.json();
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        return text ? JSON.parse(text) : null;
+      } catch (error) {
+        if (retries > 0) {
+          await new Promise(res => setTimeout(res, delay));
+          return fetchWithRetry(retries - 1, delay * 2);
+        }
+        return null;
+      }
+    };
+
+    return await fetchWithRetry();
   };
 
   const handleAddRecipe = async (e) => {
@@ -150,18 +164,21 @@ const App = () => {
     
     setIsGenerating(true);
     const aiData = await generateRecipeFromAI(title);
-    const standardTag = standardizeIngredient(inputIngredient);
+    
+    const category = aiData?.mainCategory || inputIngredient;
+    const standardTag = standardizeIngredient(category);
     
     const newRecipe = {
       id: Date.now(),
       title,
       ingredient: standardTag,
-      time: aiData?.time || "15分",
+      time: aiData?.time || "20分",
       cost: aiData?.cost || "500円",
-      ingredients: aiData?.ingredients || ["材料データなし"],
-      steps: aiData?.steps || ["手順データなし"],
+      ingredients: aiData?.ingredients || [`${inputIngredient}: 適量`],
+      steps: aiData?.steps || ["下準備をする", "調理する", "完成"],
       tag: standardTag
     };
+
     setRecipes([newRecipe, ...recipes]);
     setIsGenerating(false);
     setIsAdding(false);
@@ -177,34 +194,32 @@ const App = () => {
         time: aiData.time || editForm.time,
         cost: aiData.cost || editForm.cost,
         ingredients: aiData.ingredients || editForm.ingredients,
-        steps: aiData.steps || editForm.steps
+        steps: aiData.steps || editForm.steps,
+        ingredient: aiData.mainCategory || editForm.ingredient
       });
     }
     setIsRegenerating(false);
   };
 
-  const deleteRecipe = (id) => {
-    if (window.confirm("このレシピを削除してもよろしいですか？")) {
-      setRecipes(recipes.filter(r => r.id !== id));
-      setSelectedRecipe(null);
-    }
-  };
-
-  const startEditing = () => {
-    setEditForm({...selectedRecipe});
-    setIsEditing(true);
-  };
-
   const handleSaveEdit = () => {
     const updatedRecipe = {
       ...editForm,
-      ingredient: standardizeIngredient(editForm.ingredient),
       tag: standardizeIngredient(editForm.ingredient)
     };
     setRecipes(recipes.map(r => r.id === editForm.id ? updatedRecipe : r));
     setSelectedRecipe(updatedRecipe);
     setIsEditing(false);
   };
+
+  const filteredRecipes = recipes.filter(r => {
+    const searchLower = searchTerm.toLowerCase();
+    if (searchTerm === "すべて" || searchTerm === "") return true;
+    return (
+      r.title.toLowerCase().includes(searchLower) || 
+      r.ingredient.toLowerCase().includes(searchLower) || 
+      (r.tag && r.tag.toLowerCase().includes(searchLower))
+    );
+  });
 
   return (
     <div className="min-h-screen bg-[#020617] text-slate-100 font-sans">
@@ -213,9 +228,7 @@ const App = () => {
           <div className="w-10 h-10 bg-gradient-to-tr from-orange-600 to-orange-400 rounded-xl flex items-center justify-center shadow-lg shadow-orange-500/20">
             <ChefHat className="text-white w-6 h-6" />
           </div>
-          <h1 className="text-xl font-black tracking-widest text-white uppercase italic">
-            REPERTOIRE
-          </h1>
+          <h1 className="text-xl font-black tracking-widest text-white uppercase italic">REPERTOIRE</h1>
         </div>
         <button onClick={() => setIsAdding(true)} className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center border border-white/10 active:scale-90 transition-transform">
           <Plus className="w-6 h-6 text-white" />
@@ -234,7 +247,6 @@ const App = () => {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-
           <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
             {quickFilters.map(filter => (
               <button
@@ -254,7 +266,7 @@ const App = () => {
 
         <div className="grid grid-cols-1 gap-3">
           {filteredRecipes.map(recipe => (
-            <div key={recipe.id} onClick={() => setSelectedRecipe(recipe)} className="bg-slate-800/40 p-5 rounded-2xl border border-white/5 active:scale-[0.98] transition-all flex items-center gap-4">
+            <div key={recipe.id} onClick={() => setSelectedRecipe(recipe)} className="bg-slate-800/40 p-5 rounded-2xl border border-white/5 active:scale-[0.98] transition-all flex items-center gap-4 cursor-pointer">
               <div className="flex-1 min-w-0">
                 <span className="text-[10px] font-black text-orange-500 uppercase tracking-widest block mb-1">{recipe.tag}</span>
                 <h3 className="font-black text-white text-base truncate">{recipe.title}</h3>
@@ -266,28 +278,18 @@ const App = () => {
               <ChevronRight className="w-5 h-5 text-slate-500" />
             </div>
           ))}
-          {filteredRecipes.length === 0 && (
-            <div className="text-center py-12">
-              <p className="text-slate-500 font-bold mb-4">見つかりませんでした</p>
-              <button onClick={() => setSearchTerm("")} className="text-orange-500 font-black text-sm uppercase tracking-widest">検索をリセット</button>
-            </div>
-          )}
         </div>
       </main>
 
       {selectedRecipe && (
         <div className="fixed inset-0 z-50 bg-[#020617] flex flex-col">
           <div className="p-4 flex items-center gap-4 border-b border-white/5 bg-slate-900/50">
-            <button onClick={() => {setSelectedRecipe(null); setIsEditing(false);}} className="p-2 bg-white/5 rounded-xl">
-              <ChevronLeft className="w-6 h-6 text-white" />
-            </button>
-            <h2 className="flex-1 text-lg font-black truncate text-white">
-              {isEditing ? "編集" : selectedRecipe.title}
-            </h2>
+            <button onClick={() => {setSelectedRecipe(null); setIsEditing(false);}} className="p-2 bg-white/5 rounded-xl"><ChevronLeft className="w-6 h-6 text-white" /></button>
+            <h2 className="flex-1 text-lg font-black truncate text-white">{isEditing ? "編集" : selectedRecipe.title}</h2>
             {!isEditing && (
               <div className="flex gap-2">
-                <button onClick={() => deleteRecipe(selectedRecipe.id)} className="p-2 text-red-400 bg-red-400/10 rounded-xl"><Trash2 className="w-5 h-5" /></button>
-                <button onClick={startEditing} className="p-2 text-blue-400 bg-blue-400/10 rounded-xl"><Edit2 className="w-5 h-5" /></button>
+                <button onClick={() => { if(window.confirm("削除しますか？")) { setRecipes(recipes.filter(r => r.id !== selectedRecipe.id)); setSelectedRecipe(null); }}} className="p-2 text-red-400 bg-red-400/10 rounded-xl"><Trash2 className="w-5 h-5" /></button>
+                <button onClick={() => {setEditForm({...selectedRecipe}); setIsEditing(true);}} className="p-2 text-blue-400 bg-blue-400/10 rounded-xl"><Edit2 className="w-5 h-5" /></button>
               </div>
             )}
           </div>
@@ -297,27 +299,17 @@ const App = () => {
               <div className="space-y-6">
                 <div className="space-y-2">
                   <div className="flex justify-between items-end">
-                    <label className="text-[10px] font-black text-slate-500 uppercase">タイトル</label>
-                    <button onClick={handleRegenerateInEdit} disabled={isRegenerating} className="flex items-center gap-1 text-[10px] font-black text-orange-500 uppercase bg-orange-500/10 px-2 py-1 rounded-lg border border-orange-500/20 active:scale-95 transition-transform disabled:opacity-50">
+                    <label className="text-[10px] font-black text-slate-500 uppercase">料理名</label>
+                    <button onClick={handleRegenerateInEdit} disabled={isRegenerating} className="flex items-center gap-1 text-[10px] font-black text-orange-400 uppercase bg-orange-500/10 px-3 py-1.5 rounded-lg border border-orange-500/20 disabled:opacity-50">
                       {isRegenerating ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
-                      AIでレシピ詳細を取得
+                      AIでレシピを取得
                     </button>
                   </div>
                   <input className="w-full p-4 bg-slate-800 border border-white/10 rounded-xl text-white font-bold" value={editForm.title} onChange={e => setEditForm({...editForm, title: e.target.value})} />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-500 uppercase">メイン食材 (鶏もも/挽肉/豚ロース など)</label>
+                  <label className="text-[10px] font-black text-slate-500 uppercase">食材分類</label>
                   <input className="w-full p-4 bg-slate-800 border border-white/10 rounded-xl text-white font-bold" value={editForm.ingredient} onChange={e => setEditForm({...editForm, ingredient: e.target.value})} />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-500 uppercase">時間</label>
-                    <input className="w-full p-4 bg-slate-800 border border-white/10 rounded-xl text-white" value={editForm.time} onChange={e => setEditForm({...editForm, time: e.target.value})} />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-500 uppercase">費用</label>
-                    <input className="w-full p-4 bg-slate-800 border border-white/10 rounded-xl text-white" value={editForm.cost} onChange={e => setEditForm({...editForm, cost: e.target.value})} />
-                  </div>
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-slate-500 uppercase">材料 (1行ずつ)</label>
@@ -327,7 +319,7 @@ const App = () => {
                   <label className="text-[10px] font-black text-slate-500 uppercase">手順 (1行ずつ)</label>
                   <textarea rows={5} className="w-full p-4 bg-slate-800 border border-white/10 rounded-xl text-white text-sm" value={editForm.steps.join('\n')} onChange={e => setEditForm({...editForm, steps: e.target.value.split('\n')})} />
                 </div>
-                <button onClick={handleSaveEdit} className="w-full py-5 bg-orange-500 text-white rounded-2xl font-black flex items-center justify-center gap-2 shadow-lg shadow-orange-500/20"><Save className="w-5 h-5" /> 保存する</button>
+                <button onClick={handleSaveEdit} className="w-full py-5 bg-orange-500 text-white rounded-2xl font-black flex items-center justify-center gap-2"><Save className="w-5 h-5" /> 保存</button>
               </div>
             ) : (
               <>
@@ -350,7 +342,7 @@ const App = () => {
                   </div>
                 </div>
                 <div className="space-y-4 pb-12">
-                  <h4 className="text-xs font-black flex items-center gap-2 uppercase tracking-widest text-white"><PlayCircle className="w-4 h-4 text-orange-500" /> 手順</h4>
+                  <h4 className="text-xs font-black flex items-center gap-2 uppercase tracking-widest text-white"><PlayCircle className="w-4 h-4 text-orange-500" /> 作り方</h4>
                   <div className="space-y-4">
                     {selectedRecipe.steps?.map((step, i) => (
                       <div key={i} className="flex gap-4">
@@ -369,16 +361,16 @@ const App = () => {
       {isAdding && (
         <div className="fixed inset-0 z-50 bg-[#020617] flex flex-col">
           <div className="p-4 flex items-center justify-between border-b border-white/5 bg-slate-900/50">
-            <h2 className="text-lg font-black text-white">新規作成</h2>
+            <h2 className="text-lg font-black text-white">新規レシピ</h2>
             <button onClick={() => setIsAdding(false)} className="p-2 bg-white/5 rounded-xl"><X className="w-6 h-6 text-white" /></button>
           </div>
           <div className="p-6">
             <form onSubmit={handleAddRecipe} className="space-y-6">
-              <input required name="title" className="w-full px-5 py-4 bg-slate-800 border border-white/5 rounded-2xl text-white font-bold" placeholder="料理名（例：麻婆豆腐）" />
-              <input required name="ingredient" className="w-full px-5 py-4 bg-slate-800 border border-white/5 rounded-2xl text-white font-bold" placeholder="メインの食材（挽肉 など）" />
+              <input required name="title" className="w-full px-5 py-4 bg-slate-800 border border-white/5 rounded-2xl text-white font-bold" placeholder="料理名" />
+              <input required name="ingredient" className="w-full px-5 py-4 bg-slate-800 border border-white/5 rounded-2xl text-white font-bold" placeholder="食材のヒント" />
               <button disabled={isGenerating} type="submit" className="w-full py-5 bg-orange-500 text-white rounded-2xl font-black flex items-center justify-center gap-3 shadow-lg shadow-orange-500/20">
                 {isGenerating ? <Loader2 className="animate-spin" /> : <Sparkles />}
-                {isGenerating ? "生成中..." : "AIでレシピを作成"}
+                {isGenerating ? "AI生成中..." : "AIでレシピを作成"}
               </button>
             </form>
           </div>
