@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, Utensils, ChefHat, Clock, CreditCard, X, ChevronRight, BookOpen, List, PlayCircle, Sparkles, Loader2, ChevronLeft, Edit2, Trash2, Save, RefreshCw } from 'lucide-react';
+import { Search, Plus, Utensils, ChefHat, Clock, CreditCard, X, ChevronRight, BookOpen, List, PlayCircle, Sparkles, Loader2, ChevronLeft, Edit2, Trash2, Save, RefreshCw, Filter } from 'lucide-react';
 
 const App = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -9,33 +9,102 @@ const App = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [recipes, setRecipes] = useState([]);
-  
-  // 編集用のテンポラリ状態
   const [editForm, setEditForm] = useState(null);
 
-  // 初期データ（LocalStorageから読み込み、なければ初期値をセット）
+  // 食材クイックフィルターに「挽肉」を復活
+  const quickFilters = ["すべて", "鶏もも", "鶏むね", "豚ロース", "豚こま切れ", "豚バラ", "挽肉", "牛肉", "魚介", "副菜"];
+
+  // 食材表記の統一ルール
+  const standardizeIngredient = (text) => {
+    let standard = text;
+    if (text.includes("挽肉") || text.includes("ひき肉") || text.includes("合挽き")) standard = "挽肉";
+    else if (text.includes("鶏肉") || text.includes("鶏モモ") || text.includes("鶏もも肉")) standard = "鶏もも";
+    else if (text.includes("鶏むね肉") || text.includes("鶏ムネ")) standard = "鶏むね";
+    else if (text.includes("豚ロース肉") || text.includes("トンテキ")) standard = "豚ロース";
+    else if (text.includes("豚バラ肉") || text.includes("豚バラ")) standard = "豚バラ";
+    else if (text.includes("豚肉") || text.includes("豚こま")) standard = "豚こま切れ";
+    return standard;
+  };
+
+  // 全メニューリスト
+  const fullMenuData = [
+    { title: "マグロアボカド丼", ingredient: "マグロ, アボカド", tag: "魚介" },
+    { title: "サーモンアボカド丼", ingredient: "サーモン, アボカド", tag: "魚介" },
+    { title: "チーズタッカルビ", ingredient: "鶏もも, チーズ", tag: "鶏もも" },
+    { title: "豚ロースの水菜巻き", ingredient: "豚ロース, 水菜", tag: "豚ロース" },
+    { title: "油淋鶏", ingredient: "鶏もも, 長ねぎ", tag: "鶏もも" },
+    { title: "野菜炒め", ingredient: "豚こま切れ, ニンジン, ピーマン", tag: "豚こま切れ" },
+    { title: "豚ローストンテキ", ingredient: "豚ロース, きのこ", tag: "豚ロース" },
+    { title: "鰆の焼き物", ingredient: "鰆", tag: "魚介" },
+    { title: "ベーコンとピーマン炒め", ingredient: "ベーコン, ピーマン", tag: "副菜" },
+    { title: "鶏チキンステーキ", ingredient: "鶏もも", tag: "鶏もも" },
+    { title: "サムギョプサル", ingredient: "豚バラ", tag: "豚バラ" },
+    { title: "豚の角煮", ingredient: "豚バラ", tag: "豚バラ" },
+    { title: "豚の生姜焼き", ingredient: "豚こま切れ, 玉ねぎ", tag: "豚こま切れ" },
+    { title: "肉そぼろ甘辛炒め", ingredient: "挽肉", tag: "挽肉" },
+    { title: "鶏肉とブロッコリーのクリーム煮", ingredient: "鶏もも, ブロッコリー", tag: "鶏もも" },
+    { title: "春巻き", ingredient: "豚こま切れ, 春雨", tag: "中華" },
+    { title: "カツオのたたき", ingredient: "カツオ", tag: "魚介" },
+    { title: "鶏肉カレー", ingredient: "鶏もも, 野菜", tag: "カレー" },
+    { title: "豚キムチ", ingredient: "豚バラ, キムチ", tag: "豚バラ" },
+    { title: "チキントマト煮込み", ingredient: "鶏もも, トマト", tag: "鶏もも" },
+    { title: "スペアリブ", ingredient: "豚バラ", tag: "豚バラ" },
+    { title: "豚肉とナスの甘辛炒め", ingredient: "豚こま切れ, ナス", tag: "豚こま切れ" },
+    { title: "鶏肉の甘辛煮", ingredient: "鶏もも", tag: "鶏もも" },
+    { title: "牛肉の甘辛煮", ingredient: "牛肉", tag: "牛肉" },
+    { title: "鶏肉白菜クリーム煮", ingredient: "鶏もも, 白菜", tag: "鶏もも" },
+    { title: "ハンバーグ", ingredient: "挽肉, 玉ねぎ", tag: "挽肉" },
+    { title: "鶏のから揚げ", ingredient: "鶏もも", tag: "鶏もも" },
+    { title: "ぶり大根", ingredient: "ぶり, 大根", tag: "魚介" },
+    { title: "鮭のムニエル", ingredient: "鮭", tag: "魚介" },
+    { title: "回鍋肉", ingredient: "豚バラ, キャベツ", tag: "豚バラ" },
+    { title: "親子丼", ingredient: "鶏もも, 卵", tag: "鶏もも" },
+    { title: "豚もやし（レンジ）", ingredient: "豚バラ, もやし", tag: "時短" },
+    { title: "小松菜のお浸し", ingredient: "小松菜", tag: "副菜" },
+    { title: "菊菜のお浸し", ingredient: "菊菜", tag: "副菜" },
+    { title: "カオマンガイ", ingredient: "鶏もも, 米", tag: "鶏もも" },
+    { title: "鶏モモコチュジャン炒め", ingredient: "鶏もも", tag: "鶏もも" },
+    { title: "麻婆豆腐", ingredient: "豆腐, 挽肉", tag: "挽肉" },
+    { title: "冷凍餃子", ingredient: "餃子", tag: "時短" },
+    { title: "肉みそキャベツ", ingredient: "キャベツ, 挽肉", tag: "挽肉" },
+    { title: "豚肉とナスの甘酢炒め", ingredient: "豚こま切れ, ナス", tag: "豚こま切れ" },
+    { title: "牛丼", ingredient: "牛肉, 玉ねぎ", tag: "牛肉" },
+    { title: "棒棒鶏", ingredient: "鶏むね, きゅうり", tag: "鶏むね" },
+    { title: "ナスの肉巻き甘辛炒め", ingredient: "豚こま切れ, ナス", tag: "豚こま切れ" },
+    { title: "タンドリーチキン", ingredient: "鶏もも", tag: "鶏もも" },
+    { title: "鶏むね肉のから揚げ", ingredient: "鶏むね", tag: "鶏むね" },
+    { title: "トマト煮込みハンバーグ", ingredient: "挽肉, トマト", tag: "挽肉" },
+    { title: "赤から鍋", ingredient: "豚バラ, 白菜", tag: "豚バラ" },
+    { title: "野菜の蒸し焼き", ingredient: "季節の野菜", tag: "副菜" },
+    { title: "豚ロース肉のナス巻き", ingredient: "豚ロース, ナス", tag: "豚ロース" },
+    { title: "豚肩ロースステーキ", ingredient: "豚ロース", tag: "豚ロース" }
+  ].map((item, index) => ({
+    id: index + 1,
+    ...item,
+    time: "20分",
+    cost: "500円",
+    ingredients: [`${item.ingredient}: 適量`],
+    steps: ["下準備をする", "火を通す", "味付けをして完成"],
+  }));
+
   useEffect(() => {
-    const saved = localStorage.getItem('my-recipes');
+    const saved = localStorage.getItem('my-recipes-v6');
     if (saved) {
       setRecipes(JSON.parse(saved));
     } else {
-      const initialRecipes = [
-        { id: 1, title: "鶏肉カレー", ingredient: "鶏もも肉", time: "30分", cost: "500円", ingredients: ["鶏もも肉: 250g", "玉ねぎ: 1個", "カレールー: 2皿分"], steps: ["具材を切る", "炒めて煮込む", "ルーを溶かす"], tag: "鶏肉" },
-        { id: 2, title: "豚キムチ", ingredient: "豚肉, キムチ", time: "10分", cost: "400円", ingredients: ["豚バラ肉: 150g", "キムチ: 100g", "ニラ: 1/2束"], steps: ["豚肉を炒める", "キムチを加えて炒める"], tag: "豚肉" }
-      ];
-      setRecipes(initialRecipes);
+      setRecipes(fullMenuData);
     }
   }, []);
 
-  // レシピが更新されるたびに保存
   useEffect(() => {
     if (recipes.length > 0) {
-      localStorage.setItem('my-recipes', JSON.stringify(recipes));
+      localStorage.setItem('my-recipes-v6', JSON.stringify(recipes));
     }
   }, [recipes]);
 
   const filteredRecipes = recipes.filter(r => {
     const searchLower = searchTerm.toLowerCase();
+    if (searchTerm === "すべて" || searchTerm === "") return true;
     return (
       r.title.toLowerCase().includes(searchLower) || 
       r.ingredient.toLowerCase().includes(searchLower) || 
@@ -44,13 +113,13 @@ const App = () => {
   });
 
   const generateRecipeFromAI = async (dishName) => {
-    const apiKey = ""; // APIキーは環境変数等で管理するのが理想
+    const apiKey = ""; 
     try {
       const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          contents: [{ parts: [{ text: `料理名「${dishName}」のレシピを教えてください。材料リスト（配列形式）と手順（配列形式）、目安費用、目安時間をJSON形式で出力してください。` }] }],
+          contents: [{ parts: [{ text: `料理名「${dishName}」のレシピを教えてください。食材名には必ず以下の分類のいずれかを使用し、表記を厳守してください：鶏もも, 鶏むね, 豚ロース, 豚こま切れ, 豚バラ, 挽肉。材料リスト（配列形式）と手順（配列形式）、目安費用、目安時間をJSON形式で出力してください。` }] }],
           generationConfig: {
             responseMimeType: "application/json",
             responseSchema: {
@@ -66,7 +135,8 @@ const App = () => {
         })
       });
       const data = await response.json();
-      return JSON.parse(data.candidates[0].content.parts[0].text);
+      const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      return text ? JSON.parse(text) : null;
     } catch (error) {
       return null;
     }
@@ -76,20 +146,21 @@ const App = () => {
     e.preventDefault();
     const formData = new FormData(e.target);
     const title = formData.get('title');
-    const ingredient = formData.get('ingredient');
+    const inputIngredient = formData.get('ingredient');
     
     setIsGenerating(true);
     const aiData = await generateRecipeFromAI(title);
+    const standardTag = standardizeIngredient(inputIngredient);
     
     const newRecipe = {
       id: Date.now(),
       title,
-      ingredient,
+      ingredient: standardTag,
       time: aiData?.time || "15分",
       cost: aiData?.cost || "500円",
       ingredients: aiData?.ingredients || ["材料データなし"],
       steps: aiData?.steps || ["手順データなし"],
-      tag: ingredient
+      tag: standardTag
     };
     setRecipes([newRecipe, ...recipes]);
     setIsGenerating(false);
@@ -125,44 +196,67 @@ const App = () => {
   };
 
   const handleSaveEdit = () => {
-    setRecipes(recipes.map(r => r.id === editForm.id ? editForm : r));
-    setSelectedRecipe(editForm);
+    const updatedRecipe = {
+      ...editForm,
+      ingredient: standardizeIngredient(editForm.ingredient),
+      tag: standardizeIngredient(editForm.ingredient)
+    };
+    setRecipes(recipes.map(r => r.id === editForm.id ? updatedRecipe : r));
+    setSelectedRecipe(updatedRecipe);
     setIsEditing(false);
   };
 
   return (
     <div className="min-h-screen bg-[#020617] text-slate-100 font-sans">
       <header className="sticky top-0 z-40 bg-slate-900/80 backdrop-blur-xl border-b border-white/5 px-4 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="flex-shrink-0 w-10 h-10 bg-gradient-to-tr from-orange-600 to-orange-400 rounded-xl flex items-center justify-center shadow-lg shadow-orange-500/20">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-gradient-to-tr from-orange-600 to-orange-400 rounded-xl flex items-center justify-center shadow-lg shadow-orange-500/20">
             <ChefHat className="text-white w-6 h-6" />
           </div>
-          <h1 className="text-base sm:text-lg font-black tracking-tight text-white whitespace-nowrap overflow-hidden text-ellipsis">
-            今日の晩ごはん <span className="text-orange-500">何にしよう？</span>
+          <h1 className="text-xl font-black tracking-widest text-white uppercase italic">
+            REPERTOIRE
           </h1>
         </div>
-        <button onClick={() => setIsAdding(true)} className="flex-shrink-0 w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center border border-white/10 active:scale-90 transition-transform ml-2">
+        <button onClick={() => setIsAdding(true)} className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center border border-white/10 active:scale-90 transition-transform">
           <Plus className="w-6 h-6 text-white" />
         </button>
       </header>
 
       <main className="px-4 py-6 space-y-6 pb-32">
-        <div className="relative">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 w-5 h-5" />
-          <input
-            type="text"
-            placeholder="料理名、食材名で検索"
-            className="w-full pl-12 pr-4 py-4 bg-slate-800/50 border border-white/5 rounded-2xl text-white outline-none focus:ring-2 focus:ring-orange-500/50"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+        <div className="space-y-4">
+          <div className="relative">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 w-5 h-5" />
+            <input
+              type="text"
+              placeholder="料理名、食材名で検索"
+              className="w-full pl-12 pr-4 py-4 bg-slate-800/50 border border-white/5 rounded-2xl text-white outline-none focus:ring-2 focus:ring-orange-500/50"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+
+          <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
+            {quickFilters.map(filter => (
+              <button
+                key={filter}
+                onClick={() => setSearchTerm(filter === "すべて" ? "" : filter)}
+                className={`flex-shrink-0 px-4 py-2 rounded-full text-[10px] font-black transition-all border ${
+                  (searchTerm === filter || (filter === "すべて" && searchTerm === ""))
+                    ? "bg-orange-500 border-orange-400 text-white shadow-lg shadow-orange-500/20"
+                    : "bg-slate-800 border-white/5 text-slate-400 hover:border-white/20"
+                }`}
+              >
+                {filter}
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className="grid grid-cols-1 gap-3">
           {filteredRecipes.map(recipe => (
             <div key={recipe.id} onClick={() => setSelectedRecipe(recipe)} className="bg-slate-800/40 p-5 rounded-2xl border border-white/5 active:scale-[0.98] transition-all flex items-center gap-4">
               <div className="flex-1 min-w-0">
-                <span className="text-[10px] font-black text-orange-500 uppercase tracking-widest">{recipe.tag}</span>
+                <span className="text-[10px] font-black text-orange-500 uppercase tracking-widest block mb-1">{recipe.tag}</span>
                 <h3 className="font-black text-white text-base truncate">{recipe.title}</h3>
                 <div className="flex gap-4 text-[10px] text-slate-400 font-bold mt-1">
                   <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {recipe.time}</span>
@@ -172,10 +266,15 @@ const App = () => {
               <ChevronRight className="w-5 h-5 text-slate-500" />
             </div>
           ))}
+          {filteredRecipes.length === 0 && (
+            <div className="text-center py-12">
+              <p className="text-slate-500 font-bold mb-4">見つかりませんでした</p>
+              <button onClick={() => setSearchTerm("")} className="text-orange-500 font-black text-sm uppercase tracking-widest">検索をリセット</button>
+            </div>
+          )}
         </div>
       </main>
 
-      {/* 詳細・編集モーダル */}
       {selectedRecipe && (
         <div className="fixed inset-0 z-50 bg-[#020617] flex flex-col">
           <div className="p-4 flex items-center gap-4 border-b border-white/5 bg-slate-900/50">
@@ -183,7 +282,7 @@ const App = () => {
               <ChevronLeft className="w-6 h-6 text-white" />
             </button>
             <h2 className="flex-1 text-lg font-black truncate text-white">
-              {isEditing ? "レシピを編集" : selectedRecipe.title}
+              {isEditing ? "編集" : selectedRecipe.title}
             </h2>
             {!isEditing && (
               <div className="flex gap-2">
@@ -199,16 +298,16 @@ const App = () => {
                 <div className="space-y-2">
                   <div className="flex justify-between items-end">
                     <label className="text-[10px] font-black text-slate-500 uppercase">タイトル</label>
-                    <button 
-                      onClick={handleRegenerateInEdit}
-                      disabled={isRegenerating}
-                      className="flex items-center gap-1 text-[10px] font-black text-orange-500 uppercase bg-orange-500/10 px-2 py-1 rounded-lg border border-orange-500/20 active:scale-95 transition-transform disabled:opacity-50"
-                    >
+                    <button onClick={handleRegenerateInEdit} disabled={isRegenerating} className="flex items-center gap-1 text-[10px] font-black text-orange-500 uppercase bg-orange-500/10 px-2 py-1 rounded-lg border border-orange-500/20 active:scale-95 transition-transform disabled:opacity-50">
                       {isRegenerating ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
-                      AIで再生成
+                      AIでレシピ詳細を取得
                     </button>
                   </div>
                   <input className="w-full p-4 bg-slate-800 border border-white/10 rounded-xl text-white font-bold" value={editForm.title} onChange={e => setEditForm({...editForm, title: e.target.value})} />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-500 uppercase">メイン食材 (鶏もも/挽肉/豚ロース など)</label>
+                  <input className="w-full p-4 bg-slate-800 border border-white/10 rounded-xl text-white font-bold" value={editForm.ingredient} onChange={e => setEditForm({...editForm, ingredient: e.target.value})} />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
@@ -221,11 +320,11 @@ const App = () => {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-500 uppercase">材料 (1行ずつ入力)</label>
+                  <label className="text-[10px] font-black text-slate-500 uppercase">材料 (1行ずつ)</label>
                   <textarea rows={5} className="w-full p-4 bg-slate-800 border border-white/10 rounded-xl text-white text-sm" value={editForm.ingredients.join('\n')} onChange={e => setEditForm({...editForm, ingredients: e.target.value.split('\n')})} />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-500 uppercase">手順 (1行ずつ入力)</label>
+                  <label className="text-[10px] font-black text-slate-500 uppercase">手順 (1行ずつ)</label>
                   <textarea rows={5} className="w-full p-4 bg-slate-800 border border-white/10 rounded-xl text-white text-sm" value={editForm.steps.join('\n')} onChange={e => setEditForm({...editForm, steps: e.target.value.split('\n')})} />
                 </div>
                 <button onClick={handleSaveEdit} className="w-full py-5 bg-orange-500 text-white rounded-2xl font-black flex items-center justify-center gap-2 shadow-lg shadow-orange-500/20"><Save className="w-5 h-5" /> 保存する</button>
@@ -267,20 +366,19 @@ const App = () => {
         </div>
       )}
 
-      {/* 新規追加モーダル */}
       {isAdding && (
         <div className="fixed inset-0 z-50 bg-[#020617] flex flex-col">
           <div className="p-4 flex items-center justify-between border-b border-white/5 bg-slate-900/50">
-            <h2 className="text-lg font-black text-white">レシピを追加</h2>
+            <h2 className="text-lg font-black text-white">新規作成</h2>
             <button onClick={() => setIsAdding(false)} className="p-2 bg-white/5 rounded-xl"><X className="w-6 h-6 text-white" /></button>
           </div>
           <div className="p-6">
             <form onSubmit={handleAddRecipe} className="space-y-6">
-              <input required name="title" className="w-full px-5 py-4 bg-slate-800 border border-white/5 rounded-2xl text-white font-bold" placeholder="料理名（例：ハンバーグ）" />
-              <input required name="ingredient" className="w-full px-5 py-4 bg-slate-800 border border-white/5 rounded-2xl text-white font-bold" placeholder="主な食材（例：挽肉）" />
-              <button disabled={isGenerating} type="submit" className="w-full py-5 bg-orange-500 text-white rounded-2xl font-black flex items-center justify-center gap-3">
+              <input required name="title" className="w-full px-5 py-4 bg-slate-800 border border-white/5 rounded-2xl text-white font-bold" placeholder="料理名（例：麻婆豆腐）" />
+              <input required name="ingredient" className="w-full px-5 py-4 bg-slate-800 border border-white/5 rounded-2xl text-white font-bold" placeholder="メインの食材（挽肉 など）" />
+              <button disabled={isGenerating} type="submit" className="w-full py-5 bg-orange-500 text-white rounded-2xl font-black flex items-center justify-center gap-3 shadow-lg shadow-orange-500/20">
                 {isGenerating ? <Loader2 className="animate-spin" /> : <Sparkles />}
-                {isGenerating ? "AI生成中..." : "AIでレシピを作成"}
+                {isGenerating ? "生成中..." : "AIでレシピを作成"}
               </button>
             </form>
           </div>
